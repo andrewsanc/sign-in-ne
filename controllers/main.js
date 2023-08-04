@@ -11,7 +11,6 @@ const CustomAPIError = require("../errors/custom-error");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   if (!email || !password) {
     throw new CustomAPIError("Please provide email and password", 400);
@@ -27,12 +26,24 @@ const login = async (req, res) => {
 };
 
 const dashboard = async (req, res) => {
-  const luckyNumber = Math.floor(Math.random() * 100);
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer")) {
+    throw new CustomAPIError("No token provided", 401);
+  }
 
-  res.status(200).json({
-    msg: `Hello, Andrew`,
-    secret: `Here is your authorized data, your lucky number is ${luckyNumber}`,
-  });
+  const [, token] = authHeader.split(" ");
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const luckyNumber = Math.floor(Math.random() * 100);
+
+    res.status(200).json({
+      msg: `Hello, ${decoded.email}`,
+      secret: `Here is your authorized data, your lucky number is ${luckyNumber}`,
+    });
+  } catch (err) {
+    throw new CustomAPIError("Not autheroized to access this route", 401);
+  }
 };
 
 module.exports = {
